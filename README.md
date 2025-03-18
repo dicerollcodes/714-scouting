@@ -64,66 +64,6 @@ Or run them separately:
    npm start
    ```
 
-## Deployment
-
-### Deploying to Heroku
-
-1. Create a Heroku account and install the Heroku CLI
-2. Login to Heroku CLI:
-   ```
-   heroku login
-   ```
-
-3. Create a new Heroku app:
-   ```
-   heroku create team714-scouting
-   ```
-
-4. Add MongoDB add-on or set up environment variable for MongoDB Atlas:
-   ```
-   heroku addons:create mongodb
-   ```
-   or
-   ```
-   heroku config:set MONGODB_URI=your_mongodb_atlas_uri
-   ```
-
-5. Set your TBA API key:
-   ```
-   heroku config:set TBA_API_KEY=your_tba_api_key
-   ```
-
-6. Deploy to Heroku:
-   ```
-   git push heroku main
-   ```
-
-### Deploying to Vercel, Netlify, or Railway
-
-Follow the standard deployment procedures for these platforms, ensuring you set up the environment variables correctly.
-
-## Using the Alliance Selection Feature
-
-1. Navigate to the Alliance Selection page
-2. Enter a Blue Alliance event URL or event code (e.g., `2023txcha`)
-3. Click "Fetch Event Data" to load team rankings
-4. Drag teams to alliance positions (captain, first pick, second pick)
-5. Click "Finalize Selections" to save your alliance selections to the database
-
-## Development
-
-### Project Structure
-
-- `src/` - Frontend React code
-  - `pages/` - Main application pages
-  - `components/` - Reusable UI components
-- `server.js` - Express.js backend server
-- `dist/` - Built frontend files (after running `npm run build`)
-
-### Backend API Endpoints
-
-- `GET /api/alliances/:eventKey` - Get saved alliance selections for an event
-- `POST /api/alliances` - Save alliance selections for an event
 
 ## License
 
