@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-100;
+}
+
+.field-container {
+  @apply bg-field-gray rounded-lg overflow-hidden shadow-xl;
+}
+
+.team-blue {
+  @apply text-white bg-team-blue;
+}
+
+.team-red {
+  @apply text-white bg-team-red;
+}
+
+.hexagon {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+/* Drag and drop styles */
+[draggable] {
+  user-select: none;
+  -webkit-user-drag: element;
+  cursor: grab;
+}
+
+[draggable]:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+/* Team capability indicators */
+.capability-indicator {
+  @apply w-5 h-5 rounded-full flex items-center justify-center mr-2;
+}
+
+.capability-yes {
+  @apply bg-green-500 text-white;
+}
+
+.capability-no {
+  @apply bg-red-500 text-white;
+}
+
+/* Alliance zones */
+.alliance-zone {
+  @apply flex flex-col justify-center items-center transition-all duration-200;
+}
+
+.alliance-zone.drag-over {
+  @apply opacity-80 scale-105;
+} 
