@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 // Define team data type
 export interface TeamData {
   teamNumber: string;
@@ -37,14 +39,18 @@ export const getPositionName = (position: string): string => {
   }
 };
 
-import axios from 'axios';
-
-// API URL - using proxy defined in package.json
+// API URL - will work both locally and in production
 const API_URL = '/api/teams';
 
 // Get all teams
 export const getAllTeams = async (): Promise<TeamData[]> => {
   try {
+    // First check if API is available
+    await axios.get('/api/status').catch((error) => {
+      console.error('API Status Check Failed:', error);
+      throw new Error('API server is not responding');
+    });
+
     const response = await axios.get(API_URL);
     return response.data;
   } catch (error) {
@@ -56,8 +62,8 @@ export const getAllTeams = async (): Promise<TeamData[]> => {
 // Get team by team number
 export const getTeamByNumber = async (teamNumber: string): Promise<TeamData | null> => {
   try {
-    const response = await axios.get(`${API_URL}/${teamNumber}`);
-    return response.data;
+    const teams = await getAllTeams();
+    return teams.find(team => team.teamNumber === teamNumber) || null;
   } catch (error) {
     console.error('Error fetching team:', error);
     return null;
