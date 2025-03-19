@@ -188,7 +188,7 @@ const ScoutingForm = () => {
             {/* Algae scored on reef in auto */}
             <div>
               <label className="block text-gray-700 font-bold mb-2">
-                Algae scored on reef in auto:
+                Algae removed from reef in auto:
               </label>
               <select
                 name="algaeScoredAutoReef"
