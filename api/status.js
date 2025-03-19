@@ -28,6 +28,8 @@ async function dbConnect() {
 }
 
 module.exports = async (req, res) => {
+  console.log('Status Route Hit:', req.method, req.url);
+  
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -41,24 +43,36 @@ module.exports = async (req, res) => {
 
   if (req.method === 'GET') {
     try {
+      console.log('Attempting database connection for status check...');
       await dbConnect();
-      res.status(200).json({
+      console.log('Database connected successfully');
+      
+      const status = {
         status: 'OK',
         message: 'API is running',
         mongodbConnected: mongoose.connection.readyState === 1,
         env: process.env.NODE_ENV,
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      console.log('Status check result:', status);
+      res.status(200).json(status);
     } catch (error) {
       console.error('Status check error:', error);
+      console.error('Stack trace:', error.stack);
+      console.error('MongoDB URI defined:', !!process.env.MONGODB_URI);
+      console.error('Environment:', process.env.NODE_ENV);
+      
       res.status(500).json({
         status: 'ERROR',
         message: 'API Error',
         error: error.message,
-        mongodbConnected: mongoose.connection.readyState === 1
+        mongodbConnected: mongoose.connection.readyState === 1,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     }
   } else {
+    console.log('Invalid method for status endpoint:', req.method);
     res.status(405).json({ error: 'Method not allowed' });
   }
 }; 

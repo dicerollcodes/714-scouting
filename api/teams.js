@@ -61,6 +61,8 @@ async function dbConnect() {
 
 // API handler
 module.exports = async (req, res) => {
+  console.log('API Route Hit:', req.method, req.url);
+  
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -74,23 +76,38 @@ module.exports = async (req, res) => {
   }
 
   try {
+    console.log('Attempting database connection...');
     // Connect to database
     await dbConnect();
+    console.log('Database connected successfully');
 
     if (req.method === 'GET') {
+      console.log('Processing GET request...');
       const teams = await Team.find();
+      console.log(`Found ${teams.length} teams`);
       res.status(200).json(teams);
     } 
     else if (req.method === 'POST') {
+      console.log('Processing POST request...');
+      console.log('Request body:', req.body);
       const team = new Team(req.body);
       await team.save();
+      console.log('Team saved successfully:', team.teamNumber);
       res.status(201).json(team);
     }
     else {
+      console.log('Invalid method:', req.method);
       res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
     console.error('API Error:', error);
-    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    console.error('Stack trace:', error.stack);
+    console.error('MongoDB URI defined:', !!process.env.MONGODB_URI);
+    console.error('Environment:', process.env.NODE_ENV);
+    res.status(500).json({ 
+      error: 'Internal Server Error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }; 
