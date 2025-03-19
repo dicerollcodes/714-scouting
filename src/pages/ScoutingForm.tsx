@@ -150,7 +150,7 @@ const ScoutingForm = () => {
             {/* Coral Scored in AUTO (Trough - L1) */}
             <div>
               <label className="block text-gray-700 font-bold mb-2">
-                Coral Scored in AUTO (Trough - L1):
+                Coral Scored in AUTO (L1):
               </label>
               <select
                 name="coralScoredAutoL1"
