@@ -2,66 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllTeams, getPositionName, TeamData } from '../services/teamDataService'
 
-// Mock data for now, will be replaced with Firebase data
-const mockTeams = [
-  {
-    teamNumber: '1812',
-    startingPosition: 'L',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '2',
-    coralScoredAutoReef: '1',
-    algaeScoredAutoReef: '0',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches', 'L3Branches'],
-    algaeHandling: 'collectsFromReef',
-    defensePlayed: 'occasionally',
-    drivingSpeed: 'fast',
-    endgameAction: 'climbsCageShallow',
-  },
-  {
-    teamNumber: '254',
-    startingPosition: 'R',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '3+',
-    coralScoredAutoReef: '2',
-    algaeScoredAutoReef: '1',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches', 'L3Branches', 'L4Branches'],
-    algaeHandling: 'scoresInProcessor',
-    defensePlayed: 'never',
-    drivingSpeed: 'veryFast',
-    endgameAction: 'climbsCageDeep',
-  },
-  {
-    teamNumber: '118',
-    startingPosition: 'M',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '1',
-    coralScoredAutoReef: '0',
-    algaeScoredAutoReef: '2+',
-    primaryAutoActivity: 'algaeRemoval',
-    coralScoringLocation: ['troughL1', 'L2Branches'],
-    algaeHandling: 'bothBandC',
-    defensePlayed: 'occasionally',
-    drivingSpeed: 'fast',
-    endgameAction: 'parksInBargeZone',
-  },
-  {
-    teamNumber: '71',
-    startingPosition: 'M',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '2',
-    coralScoredAutoReef: '1',
-    algaeScoredAutoReef: '1',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches'],
-    algaeHandling: 'collectsFromFloor',
-    defensePlayed: 'never',
-    drivingSpeed: 'fast',
-    endgameAction: 'climbsCageShallow',
-  },
-]
-
 const TeamList = () => {
   const [teams, setTeams] = useState<TeamData[]>([])
   const [loading, setLoading] = useState(true)
@@ -73,21 +13,20 @@ const TeamList = () => {
     climbing: false,
   })
   
-  // Fetch team data
+  // Fetch team data from MongoDB
   useEffect(() => {
-    // Simulate data loading
-    setTimeout(() => {
-      setTeams(mockTeams as TeamData[])
-      setLoading(false)
-    }, 500)
+    const fetchTeams = async () => {
+      try {
+        const teamsData = await getAllTeams()
+        setTeams(teamsData)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error fetching teams:', error)
+        setLoading(false)
+      }
+    }
     
-    // In a real app, you would fetch from Firebase
-    // const fetchTeams = async () => {
-    //   const teamsData = await getAllTeams()
-    //   setTeams(teamsData)
-    //   setLoading(false)
-    // }
-    // fetchTeams()
+    fetchTeams()
   }, [])
   
   // Filter teams based on search and capability filters

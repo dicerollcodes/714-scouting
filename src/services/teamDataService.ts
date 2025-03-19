@@ -37,116 +37,40 @@ export const getPositionName = (position: string): string => {
   }
 };
 
-// Mock team data for now, will be replaced with Firebase data
-export const mockTeams: TeamData[] = [
-  { 
-    teamNumber: '1812',
-    name: 'Team 1812',
-    startingPosition: 'L',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '2',
-    coralScoredAutoReef: '1',
-    algaeScoredAutoReef: '0',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches', 'L3Branches'],
-    algaeHandling: 'collectsFromReef',
-    defensePlayed: 'occasionally',
-    drivingSpeed: 'fast',
-    endgameAction: 'climbsCageShallow',
-    capabilities: {
-      autoScoring: true,
-      highScoring: true,
-      algaeHandling: true,
-      climbing: true,
-      fastDriving: true,
-    }
-  },
-  { 
-    teamNumber: '254',
-    name: 'Team 254',
-    startingPosition: 'R',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '3+',
-    coralScoredAutoReef: '2',
-    algaeScoredAutoReef: '1',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches', 'L3Branches', 'L4Branches'],
-    algaeHandling: 'bothBandC',
-    defensePlayed: 'never',
-    drivingSpeed: 'veryFast',
-    endgameAction: 'climbsCageDeep',
-    capabilities: {
-      autoScoring: true,
-      highScoring: true,
-      algaeHandling: true,
-      climbing: true,
-      fastDriving: true,
-    }
-  },
-  { 
-    teamNumber: '118',
-    name: 'Team 118',
-    startingPosition: 'M',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '1',
-    coralScoredAutoReef: '0',
-    algaeScoredAutoReef: '2+',
-    primaryAutoActivity: 'algaeRemoval',
-    coralScoringLocation: ['troughL1'],
-    algaeHandling: 'scoresInProcessor',
-    defensePlayed: 'frequently',
-    drivingSpeed: 'moderate',
-    endgameAction: 'parksInBargeZone',
-    capabilities: {
-      autoScoring: false,
-      highScoring: false,
-      algaeHandling: true,
-      climbing: false,
-      fastDriving: true,
-    }
-  },
-  { 
-    teamNumber: '714',
-    name: 'Team 714',
-    startingPosition: 'L',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '2',
-    coralScoredAutoReef: '1',
-    algaeScoredAutoReef: '1',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches'],
-    algaeHandling: 'collectsFromFloor',
-    defensePlayed: 'never',
-    drivingSpeed: 'fast',
-    endgameAction: 'climbsCageShallow',
-    capabilities: {
-      autoScoring: true,
-      highScoring: false,
-      algaeHandling: true,
-      climbing: true,
-      fastDriving: false,
-    }
-  },
-];
+import axios from 'axios';
+
+// API URL - using proxy defined in package.json
+const API_URL = '/api/teams';
 
 // Get all teams
-export const getAllTeams = (): TeamData[] => {
-  return mockTeams;
+export const getAllTeams = async (): Promise<TeamData[]> => {
+  try {
+    const response = await axios.get(API_URL);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    return [];
+  }
 };
 
 // Get team by team number
-export const getTeamByNumber = (teamNumber: string): TeamData | undefined => {
-  return mockTeams.find(team => team.teamNumber === teamNumber);
+export const getTeamByNumber = async (teamNumber: string): Promise<TeamData | null> => {
+  try {
+    const response = await axios.get(`${API_URL}/${teamNumber}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching team:', error);
+    return null;
+  }
 };
 
-// This will be implemented with Firebase later
-export const addTeamData = (teamData: TeamData): Promise<void> => {
-  return new Promise((resolve) => {
-    // Simulate network delay
-    setTimeout(() => {
-      // Add team to mock data (in a real app, this would add to Firebase)
-      mockTeams.push(teamData);
-      resolve();
-    }, 500);
-  });
+// Add team data to MongoDB
+export const addTeamData = async (teamData: TeamData): Promise<TeamData | null> => {
+  try {
+    const response = await axios.post(API_URL, teamData);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving team data:', error);
+    return null;
+  }
 }; 

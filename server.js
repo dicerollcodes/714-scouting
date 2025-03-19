@@ -6,7 +6,7 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // More permissive CORS configuration
 app.use(cors());
@@ -55,6 +55,32 @@ const AllianceSchema = new mongoose.Schema({
 });
 
 const Alliance = mongoose.model('Alliance', AllianceSchema);
+
+// Define Team Schema
+const TeamSchema = new mongoose.Schema({
+  teamNumber: String,
+  name: String,
+  startingPosition: String,
+  leavesStartingLine: String,
+  coralScoredAutoL1: String,
+  coralScoredAutoReef: String,
+  algaeScoredAutoReef: String,
+  primaryAutoActivity: String,
+  coralScoringLocation: [String],
+  algaeHandling: String,
+  defensePlayed: String,
+  drivingSpeed: String,
+  endgameAction: String,
+  capabilities: {
+    autoScoring: Boolean,
+    highScoring: Boolean,
+    algaeHandling: Boolean,
+    climbing: Boolean,
+    fastDriving: Boolean,
+  },
+});
+
+const Team = mongoose.model('Team', TeamSchema);
 
 // Routes with explicit CORS headers
 app.get('/api/alliances/:eventKey', async (req, res) => {
@@ -128,6 +154,85 @@ app.post('/api/alliances', async (req, res) => {
     }
   } catch (error) {
     console.error('Error saving alliances:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Team Routes with explicit CORS headers
+app.get('/api/teams', async (req, res) => {
+  try {
+    // Add CORS headers explicitly
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    
+    console.log('GET request received for all teams');
+    const teams = await Team.find();
+    console.log(`Found ${teams.length} teams`);
+    res.json(teams);
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/teams/:teamNumber', async (req, res) => {
+  try {
+    // Add CORS headers explicitly
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    
+    console.log(`GET request received for team number: ${req.params.teamNumber}`);
+    const { teamNumber } = req.params;
+    const team = await Team.findOne({ teamNumber });
+    console.log(`Found team: ${team ? 'Yes' : 'No'}`);
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+    res.json(team);
+  } catch (error) {
+    console.error('Error fetching team:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/teams', async (req, res) => {
+  try {
+    // Add CORS headers explicitly
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'POST');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    
+    console.log('POST request received for team');
+    
+    // Check if request body exists
+    if (!req.body) {
+      console.error('Empty request body');
+      return res.status(400).json({ error: 'Empty request body' });
+    }
+    
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
+    // Check if team already exists
+    const existingTeam = await Team.findOne({ teamNumber: req.body.teamNumber });
+    console.log(`Existing team found: ${existingTeam ? 'Yes' : 'No'}`);
+    
+    if (existingTeam) {
+      // Update existing team
+      Object.assign(existingTeam, req.body);
+      await existingTeam.save();
+      console.log('Existing team updated successfully');
+      res.json(existingTeam);
+    } else {
+      // Create new team
+      const newTeam = new Team(req.body);
+      await newTeam.save();
+      console.log('New team created successfully');
+      res.json(newTeam);
+    }
+  } catch (error) {
+    console.error('Error saving team:', error);
     res.status(500).json({ error: error.message });
   }
 });

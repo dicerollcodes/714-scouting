@@ -12,8 +12,23 @@ interface TeamPosition {
 }
 
 const FieldVisualization = () => {
-  // Get team data from shared service
-  const teams = getAllTeams();
+  // State to store teams from API
+  const [teams, setTeams] = useState<TeamData[]>([]);
+  
+  // Fetch team data when component mounts
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const teamsData = await getAllTeams();
+        setTeams(teamsData || []); // Ensure we always have an array
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+        setTeams([]); // Set to empty array on error
+      }
+    };
+    
+    fetchTeams();
+  }, []);
   
   // State for tracking team positions on the field
   const [teamPositions, setTeamPositions] = useState<TeamPosition[]>([]);
@@ -290,41 +305,41 @@ const FieldVisualization = () => {
                 onClick={() => handleTeamClick(position.teamNumber)}
               >
                 <div className={`${allianceColor} text-white px-3 py-2 rounded-md shadow-md cursor-pointer hover:opacity-90 transition`}>
-                  <div className="font-bold">{team.number}</div>
+                  <div className="font-bold">{team.teamNumber}</div>
                 </div>
                 
                 {/* Capabilities popup when team is selected */}
                 {selectedTeam === position.teamNumber && (
                   <div className="absolute top-full left-0 mt-2 bg-white rounded-md shadow-lg p-3 z-20 w-48">
-                    <h4 className="font-bold text-sm mb-2">Team {team.number} Capabilities:</h4>
+                    <h4 className="font-bold text-sm mb-2">Team {team.teamNumber} Capabilities:</h4>
                     <ul className="text-xs space-y-1">
                       <li className="flex items-center">
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities.autoScoring ? 'bg-green-500' : 'bg-red-500'}`}>
-                          {team.capabilities.autoScoring ? '✓' : '✗'}
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities?.autoScoring ? 'bg-green-500' : 'bg-red-500'}`}>
+                          {team.capabilities?.autoScoring ? '✓' : '✗'}
                         </span>
                         Auto Scoring
                       </li>
                       <li className="flex items-center">
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities.highScoring ? 'bg-green-500' : 'bg-red-500'}`}>
-                          {team.capabilities.highScoring ? '✓' : '✗'}
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities?.highScoring ? 'bg-green-500' : 'bg-red-500'}`}>
+                          {team.capabilities?.highScoring ? '✓' : '✗'}
                         </span>
                         High Scoring (L3/L4)
                       </li>
                       <li className="flex items-center">
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities.algaeHandling ? 'bg-green-500' : 'bg-red-500'}`}>
-                          {team.capabilities.algaeHandling ? '✓' : '✗'}
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities?.algaeHandling ? 'bg-green-500' : 'bg-red-500'}`}>
+                          {team.capabilities?.algaeHandling ? '✓' : '✗'}
                         </span>
                         Handles Algae
                       </li>
                       <li className="flex items-center">
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities.climbing ? 'bg-green-500' : 'bg-red-500'}`}>
-                          {team.capabilities.climbing ? '✓' : '✗'}
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities?.climbing ? 'bg-green-500' : 'bg-red-500'}`}>
+                          {team.capabilities?.climbing ? '✓' : '✗'}
                         </span>
                         Can Climb
                       </li>
                       <li className="flex items-center">
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities.fastDriving ? 'bg-green-500' : 'bg-red-500'}`}>
-                          {team.capabilities.fastDriving ? '✓' : '✗'}
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities?.fastDriving ? 'bg-green-500' : 'bg-red-500'}`}>
+                          {team.capabilities?.fastDriving ? '✓' : '✗'}
                         </span>
                         Fast Driving
                       </li>
@@ -357,7 +372,7 @@ const FieldVisualization = () => {
                     className="bg-blue-700 text-white px-3 py-2 rounded-md shadow-md cursor-pointer hover:bg-blue-800 transition"
                     onClick={() => handleTeamClick(teamNumber)}
                   >
-                    <div className="font-bold">{team.number}</div>
+                    <div className="font-bold">{team.teamNumber}</div>
                   </div>
                 );
               })}
@@ -388,7 +403,7 @@ const FieldVisualization = () => {
                     className="bg-red-700 text-white px-3 py-2 rounded-md shadow-md cursor-pointer hover:bg-red-800 transition"
                     onClick={() => handleTeamClick(teamNumber)}
                   >
-                    <div className="font-bold">{team.number}</div>
+                    <div className="font-bold">{team.teamNumber}</div>
                   </div>
                 );
               })}
@@ -469,18 +484,10 @@ const FieldVisualization = () => {
               </div>
             );
           })}
-          <div className="ml-4 px-4 py-2 bg-teal-500 text-white rounded-md">
-            Drag & Drop Teams
-          </div>
         </div>
       </div>
-      
-      {/* Instructions */}
-      <div className="bg-gray-100 p-4 rounded-lg max-w-4xl mx-auto text-sm text-gray-700">
-        <p><strong>How to use:</strong> Drag teams from the selector to either the blue or red alliance boxes below the field. Teams will automatically appear behind the barge zone on the field. Click on any team to see their capabilities.</p>
-      </div>
     </div>
-  )
-}
+  );
+};
 
-export default FieldVisualization 
+export default FieldVisualization;

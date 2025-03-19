@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { addTeamData } from '../services/teamDataService'
 
 // Firebase import will be used later
 // import { addTeamData } from '../firebase/firestore'
@@ -61,9 +62,21 @@ const ScoutingForm = () => {
     }
     
     try {
-      // This will be implemented with Firebase later
-      // await addTeamData(formData)
-      console.log('Form submitted:', formData)
+      // Create capabilities object based on form data
+      const teamData = {
+        ...formData,
+        capabilities: {
+          autoScoring: formData.coralScoredAutoL1 !== '0' || formData.coralScoredAutoReef !== '0',
+          highScoring: formData.coralScoringLocation.includes('L3Branches') || formData.coralScoringLocation.includes('L4Branches'),
+          algaeHandling: formData.algaeHandling !== 'doesNotHandle',
+          climbing: formData.endgameAction === 'climbsCageShallow' || formData.endgameAction === 'climbsCageDeep',
+          fastDriving: formData.drivingSpeed === 'veryFast' || formData.drivingSpeed === 'fast'
+        }
+      }
+      
+      // Save to MongoDB via the API
+      await addTeamData(teamData)
+      console.log('Form submitted:', teamData)
       alert('Team data submitted successfully!')
       navigate('/teams')
     } catch (error) {
