@@ -1,140 +1,16 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { getTeamByNumber } from '../services/teamDataService'
 
-// Mock data for skibidi 
-const mockTeams = [
-  {
-    teamNumber: '1812',
-    startingPosition: 'leftCoralStation',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '2',
-    coralScoredAutoReef: '1',
-    algaeScoredAutoReef: '0',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches', 'L3Branches'],
-    algaeHandling: 'collectsFromReef',
-    defensePlayed: 'occasionally',
-    drivingSpeed: 'fast',
-    endgameAction: 'climbsCageShallow',
-  },
-  {
-    teamNumber: '254',
-    startingPosition: 'rightCoralStation',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '3+',
-    coralScoredAutoReef: '2',
-    algaeScoredAutoReef: '1',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches', 'L3Branches', 'L4Branches'],
-    algaeHandling: 'bothBandC',
-    defensePlayed: 'never',
-    drivingSpeed: 'veryFast',
-    endgameAction: 'climbsCageDeep',
-  },
-  {
-    teamNumber: '118',
-    startingPosition: 'middle',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '1',
-    coralScoredAutoReef: '0',
-    algaeScoredAutoReef: '2+',
-    primaryAutoActivity: 'algaeRemoval',
-    coralScoringLocation: ['troughL1'],
-    algaeHandling: 'scoresInProcessor',
-    defensePlayed: 'frequently',
-    drivingSpeed: 'moderate',
-    endgameAction: 'parksInBargeZone',
-  },
-  {
-    teamNumber: '714',
-    startingPosition: 'leftCoralStation',
-    leavesStartingLine: 'yes',
-    coralScoredAutoL1: '2',
-    coralScoredAutoReef: '1',
-    algaeScoredAutoReef: '1',
-    primaryAutoActivity: 'retrievesAndScores',
-    coralScoringLocation: ['troughL1', 'L2Branches'],
-    algaeHandling: 'collectsFromFloor',
-    defensePlayed: 'never',
-    drivingSpeed: 'fast',
-    endgameAction: 'climbsCageShallow',
-  },
-]
-
-// Helper function to format field values for display
-const formatFieldValue = (key: string, value: string | string[]) => {
-  switch (key) {
-    case 'startingPosition':
-      const positionMap: Record<string, string> = {
-        'leftCoralStation': 'Left of Barge Zone',
-        'middle': 'Middle (Middle of Barge Zone)',
-        'rightCoralStation': 'Right of Barge Zone',
-        'doesNotMove': 'Does Not Move',
-      }
-      return positionMap[value as string] || value
-      
-    case 'leavesStartingLine':
-      return value === 'yes' ? 'Yes' : 'No'
-      
-    case 'primaryAutoActivity':
-      const activityMap: Record<string, string> = {
-        'onlyScoresPreloaded': 'Only Scores Preloaded Coral',
-        'retrievesAndScores': 'Retrieves and Scores Additional Coral',
-        'algaeRemoval': 'Algae Removal/Scoring',
-      }
-      return activityMap[value as string] || value
-      
-    case 'coralScoringLocation':
-      const locationMap: Record<string, string> = {
-        'troughL1': 'Trough (L1)',
-        'L2Branches': 'L2 Branches',
-        'L3Branches': 'L3 Branches',
-        'L4Branches': 'L4 Branches',
-        'notObserved': 'Not Observed',
-      }
-      return (value as string[]).map(loc => locationMap[loc] || loc).join(', ')
-      
-    case 'algaeHandling':
-      const algaeMap: Record<string, string> = {
-        'doesNotHandle': 'Does Not Handle Algae',
-        'collectsFromReef': 'Collects from Reef',
-        'collectsFromFloor': 'Collects from Floor',
-        'scoresInProcessor': 'Scores in Processor',
-        'scoresInOwnNet': 'Scores in own Net',
-        'bothBandC': 'Both Collects from Reef and Floor',
-      }
-      return algaeMap[value as string] || value
-      
-    case 'defensePlayed':
-      const defenseMap: Record<string, string> = {
-        'never': 'Never',
-        'occasionally': 'Occasionally',
-        'frequently': 'Frequently',
-        'primarilyDefensive': 'Primarily a Defensive Bot',
-      }
-      return defenseMap[value as string] || value
-      
-    case 'drivingSpeed':
-      const speedMap: Record<string, string> = {
-        'veryFast': 'Very Fast',
-        'fast': 'Fast',
-        'moderate': 'Moderate',
-        'slow': 'Slow',
-      }
-      return speedMap[value as string] || value
-      
-    case 'endgameAction':
-      const endgameMap: Record<string, string> = {
-        'noAction': 'No Action',
-        'parksInBargeZone': 'Parks in Barge Zone',
-        'climbsCageShallow': 'Climbs Cage (Shallow)',
-        'climbsCageDeep': 'Climbs Cage (Deep)',
-      }
-      return endgameMap[value as string] || value
-      
-    default:
-      return value
+// Helper function to format field values
+const formatFieldValue = (key: string, value: any): string => {
+  if (Array.isArray(value)) {
+    return value.join(', ')
   }
+  if (value === undefined || value === null) {
+    return 'N/A'
+  }
+  return value.toString()
 }
 
 const TeamDetails = () => {
@@ -143,16 +19,17 @@ const TeamDetails = () => {
   const [loading, setLoading] = useState(true)
   
   useEffect(() => {
-    // This will be replaced with Firebase data fetching
-    const fetchTeamData = () => {
+    const fetchTeamData = async () => {
       setLoading(true)
-      
-      // Simulate API call
-      setTimeout(() => {
-        const team = mockTeams.find(t => t.teamNumber === teamNumber)
-        setTeamData(team || null)
+      try {
+        const team = await getTeamByNumber(teamNumber || '')
+        setTeamData(team)
+      } catch (error) {
+        console.error('Error fetching team data:', error)
+        setTeamData(null)
+      } finally {
         setLoading(false)
-      }, 500)
+      }
     }
     
     fetchTeamData()
