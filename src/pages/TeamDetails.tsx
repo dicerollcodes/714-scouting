@@ -67,7 +67,7 @@ const TeamDetails = () => {
         { key: 'leavesStartingLine', label: 'Leaves Starting Line' },
         { key: 'coralScoredAutoL1', label: 'Coral Scored in AUTO (Trough - L1)' },
         { key: 'coralScoredAutoReef', label: 'Coral Scored on REEF in AUTO' },
-        { key: 'algaeScoredAutoReef', label: 'Algae Scored on REEF in AUTO' },
+        { key: 'algaeScoredAutoReef', label: 'Algae Removed from REEF in AUTO' },
         { key: 'primaryAutoActivity', label: 'Primary AUTO Activity' },
       ],
     },
