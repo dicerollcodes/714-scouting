@@ -249,9 +249,18 @@ if (process.env.NODE_ENV === 'production') {
   // Set static folder
   app.use(express.static('dist'));
   
+  // Handle all routes not handled by API with the index.html
   app.get('*', (req, res) => {
+    // Skip API routes
+    if (req.url.startsWith('/api/')) return;
+    
     res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
   });
 }
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  // Log MongoDB connection status
+  console.log(`MongoDB connection status: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
+}); 

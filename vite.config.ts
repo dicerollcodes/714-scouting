@@ -10,10 +10,12 @@ export default defineConfig({
       // Add any path aliases if needed
     }
   },
+  optimizeDeps: {
+    include: ['react-draggable']
+  },
   build: {
-    rollupOptions: {
-      // Make sure external dependencies are properly included in the build
-      external: [],
+    commonjsOptions: {
+      include: [/node_modules/]
     }
   },
   server: {
