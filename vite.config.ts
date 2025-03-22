@@ -1,9 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // Add any path aliases if needed
+    }
+  },
+  build: {
+    rollupOptions: {
+      // Make sure external dependencies are properly included in the build
+      external: [],
+    }
+  },
   server: {
     proxy: {
       '/api': {
