@@ -25,6 +25,25 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API server is working correctly!' });
 });
 
+// Add a status endpoint that includes MongoDB connection status
+app.get('/api/status', (req, res) => {
+  console.log('Status endpoint hit');
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
+  const mongoStatus = mongoose.connection.readyState;
+  const statusMessage = {
+    server: 'running',
+    mongodb: mongoStatus === 1 ? 'connected' : 'disconnected',
+    mongoState: mongoStatus,
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log('API Status:', statusMessage);
+  res.json(statusMessage);
+});
+
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/frc-scouting', {
   useNewUrlParser: true,
