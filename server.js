@@ -60,14 +60,14 @@ const Alliance = mongoose.model('Alliance', AllianceSchema);
 const TeamSchema = new mongoose.Schema({
   teamNumber: String,
   name: String,
-  startingPosition: String,
+  startingPosition: [String],
   leavesStartingLine: String,
   coralScoredAutoL1: String,
   coralScoredAutoReef: String,
   algaeScoredAutoReef: String,
   primaryAutoActivity: String,
   coralScoringLocation: [String],
-  algaeHandling: String,
+  algaeHandling: [String],
   defensePlayed: String,
   drivingSpeed: String,
   endgameAction: String,
@@ -214,19 +214,26 @@ app.post('/api/teams', async (req, res) => {
     
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
+    // Ensure startingPosition and algaeHandling are arrays
+    const teamData = {
+      ...req.body,
+      startingPosition: Array.isArray(req.body.startingPosition) ? req.body.startingPosition : [],
+      algaeHandling: Array.isArray(req.body.algaeHandling) ? req.body.algaeHandling : []
+    };
+    
     // Check if team already exists
     const existingTeam = await Team.findOne({ teamNumber: req.body.teamNumber });
     console.log(`Existing team found: ${existingTeam ? 'Yes' : 'No'}`);
     
     if (existingTeam) {
       // Update existing team
-      Object.assign(existingTeam, req.body);
+      Object.assign(existingTeam, teamData);
       await existingTeam.save();
       console.log('Existing team updated successfully');
       res.json(existingTeam);
     } else {
       // Create new team
-      const newTeam = new Team(req.body);
+      const newTeam = new Team(teamData);
       await newTeam.save();
       console.log('New team created successfully');
       res.json(newTeam);

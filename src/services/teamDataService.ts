@@ -4,14 +4,14 @@ import axios from 'axios';
 export interface TeamData {
   teamNumber: string;
   name?: string;
-  startingPosition: 'L' | 'M' | 'R' | 'N';
+  startingPosition: string[];
   leavesStartingLine: string;
   coralScoredAutoL1: string;
   coralScoredAutoReef: string;
   algaeScoredAutoReef: string;
   primaryAutoActivity: string;
   coralScoringLocation: string[];
-  algaeHandling: string;
+  algaeHandling: string[];
   defensePlayed: string;
   drivingSpeed: string;
   endgameAction: string;

@@ -47,6 +47,10 @@ const FieldVisualization = () => {
   const blueAllianceRef = useRef<HTMLDivElement>(null);
   const redAllianceRef = useRef<HTMLDivElement>(null);
   
+  // For mobile touch support
+  const [touchTeam, setTouchTeam] = useState<string | null>(null);
+  const [touchPosition, setTouchPosition] = useState<{ x: number, y: number } | null>(null);
+  
   // Handle drag start
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, teamNumber: string) => {
     setDraggedTeam(teamNumber);
@@ -74,11 +78,67 @@ const FieldVisualization = () => {
     e.dataTransfer.dropEffect = 'move';
   };
   
-  // Handle drop on alliance zone
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, alliance: Alliance) => {
+  // Handle touch start for mobile devices
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>, teamNumber: string) => {
     e.preventDefault();
-    const teamNumber = e.dataTransfer.getData('text/plain');
+    setTouchTeam(teamNumber);
+    const touch = e.touches[0];
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
     
+    // Add visual feedback
+    if (e.currentTarget.classList) {
+      e.currentTarget.classList.add('opacity-50');
+    }
+  };
+  
+  // Handle touch move for mobile devices
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (touchTeam) {
+      const touch = e.touches[0];
+      setTouchPosition({ x: touch.clientX, y: touch.clientY });
+    }
+  };
+  
+  // Handle touch end for mobile devices
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!touchTeam || !touchPosition) {
+      return;
+    }
+    
+    // Remove visual feedback
+    if (e.currentTarget.classList) {
+      e.currentTarget.classList.remove('opacity-50');
+    }
+    
+    // Determine which alliance to drop into based on touch position
+    const blueRect = blueAllianceRef.current?.getBoundingClientRect();
+    const redRect = redAllianceRef.current?.getBoundingClientRect();
+    
+    if (blueRect && isPositionInRect(touchPosition, blueRect)) {
+      handleTeamAssignment(touchTeam, 'blue');
+    } else if (redRect && isPositionInRect(touchPosition, redRect)) {
+      handleTeamAssignment(touchTeam, 'red');
+    }
+    
+    // Reset touch state
+    setTouchTeam(null);
+    setTouchPosition(null);
+  };
+  
+  // Helper function to check if position is within a rectangle
+  const isPositionInRect = (position: { x: number, y: number }, rect: DOMRect): boolean => {
+    return (
+      position.x >= rect.left &&
+      position.x <= rect.right &&
+      position.y >= rect.top &&
+      position.y <= rect.bottom
+    );
+  };
+  
+  // Common function to handle team assignment to alliances
+  const handleTeamAssignment = (teamNumber: string, alliance: Alliance) => {
     if (!teamNumber || !alliance) return;
     
     // Update alliance teams
@@ -121,6 +181,13 @@ const FieldVisualization = () => {
         }
       }
     }
+  };
+  
+  // Handle drop on alliance zone
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, alliance: Alliance) => {
+    e.preventDefault();
+    const teamNumber = e.dataTransfer.getData('text/plain');
+    handleTeamAssignment(teamNumber, alliance);
   };
   
   // Get team data by number
@@ -195,6 +262,29 @@ const FieldVisualization = () => {
     }
     
     return '';
+  };
+  
+  // Show floating team indicator for mobile drag
+  const renderTouchDragIndicator = () => {
+    if (!touchTeam || !touchPosition) return null;
+    
+    const team = getTeamData(touchTeam);
+    if (!team) return null;
+    
+    return (
+      <div 
+        className="absolute z-50 bg-white rounded-lg shadow-lg p-2 transform -translate-x-1/2 -translate-y-1/2"
+        style={{ 
+          top: touchPosition.y,
+          left: touchPosition.x,
+          pointerEvents: 'none'
+        }}
+      >
+        <div className={`px-2 py-1 rounded ${getTeamAlliance(touchTeam) === 'blue' ? 'bg-blue-600' : getTeamAlliance(touchTeam) === 'red' ? 'bg-red-600' : 'bg-gray-800'} text-white`}>
+          {team.teamNumber}
+        </div>
+      </div>
+    );
   };
   
   return (
@@ -417,6 +507,9 @@ const FieldVisualization = () => {
         </div>
       </div>
       
+      {/* Mobile touch indicator */}
+      {renderTouchDragIndicator()}
+      
       {/* Team selector */}
       <div className="bg-white p-4 rounded-lg shadow-md max-w-4xl mx-auto">
         <h3 className="text-lg font-semibold mb-2">Team Selector</h3>
@@ -438,6 +531,9 @@ const FieldVisualization = () => {
                 draggable={true}
                 onDragStart={(e) => handleDragStart(e, team.teamNumber)}
                 onDragEnd={handleDragEnd}
+                onTouchStart={(e) => handleTouchStart(e, team.teamNumber)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 onClick={() => handleTeamClick(team.teamNumber)}
               >
                 <div className="font-medium">{team.teamNumber} <span className="text-xs font-bold ml-1">({getPositionName(team.startingPosition)})</span></div>

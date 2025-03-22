@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { addTeamData } from '../services/teamDataService'
 
@@ -11,7 +11,7 @@ const ScoutingForm = () => {
   const [formData, setFormData] = useState({
     teamNumber: '',
     // Autonomous
-    startingPosition: '',
+    startingPosition: [] as string[],
     leavesStartingLine: '',
     coralScoredAutoL1: '',
     coralScoredAutoReef: '',
@@ -19,7 +19,7 @@ const ScoutingForm = () => {
     primaryAutoActivity: '',
     // Teleop
     coralScoringLocation: [] as string[],
-    algaeHandling: '',
+    algaeHandling: [] as string[],
     defensePlayed: '',
     drivingSpeed: '',
     // Endgame
@@ -68,7 +68,8 @@ const ScoutingForm = () => {
         capabilities: {
           autoScoring: formData.coralScoredAutoL1 !== '0' || formData.coralScoredAutoReef !== '0',
           highScoring: formData.coralScoringLocation.includes('L3Branches') || formData.coralScoringLocation.includes('L4Branches'),
-          algaeHandling: formData.algaeHandling !== 'doesNotHandle',
+          algaeHandling: formData.algaeHandling.length > 0 && 
+            (formData.algaeHandling.length > 1 || !formData.algaeHandling.includes('doesNotHandle')),
           climbing: formData.endgameAction === 'climbsCageShallow' || formData.endgameAction === 'climbsCageDeep',
           fastDriving: formData.drivingSpeed === 'veryFast' || formData.drivingSpeed === 'fast'
         }
@@ -116,18 +117,59 @@ const ScoutingForm = () => {
               <label className="block text-gray-700 font-bold mb-2">
                 Starting Position (as marked on field map):
               </label>
-              <select
-                name="startingPosition"
-                value={formData.startingPosition}
-                onChange={handleSelectChange}
-                className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              >
-                <option value="">Select an option</option>
-                <option value="L">L - Left</option>
-                <option value="M">M - Middle</option>
-                <option value="R">R - Right</option>
-                <option value="N">N - Does Not Move</option>
-              </select>
+              <div className="space-y-2">
+                <div>
+                  <input
+                    type="checkbox"
+                    id="startingPositionL"
+                    name="startingPosition"
+                    value="L"
+                    checked={formData.startingPosition.includes('L')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="startingPositionL">A) L - Left</label>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    id="startingPositionM"
+                    name="startingPosition"
+                    value="M"
+                    checked={formData.startingPosition.includes('M')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="startingPositionM">B) M - Middle</label>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    id="startingPositionR"
+                    name="startingPosition"
+                    value="R"
+                    checked={formData.startingPosition.includes('R')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="startingPositionR">C) R - Right</label>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    id="startingPositionN"
+                    name="startingPosition"
+                    value="N"
+                    checked={formData.startingPosition.includes('N')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="startingPositionN">D) N - Does Not Move</label>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Select all that apply. Positions can be dragged to exact locations in the preview field.
+              </p>
             </div>
             
             {/* Leaves Starting Line */}
@@ -218,6 +260,7 @@ const ScoutingForm = () => {
                 <option value="onlyScoresPreloaded">A) Only Scores Preloaded Coral</option>
                 <option value="retrievesAndScores">B) Retrieves and Scores Additional Coral</option>
                 <option value="algaeRemoval">C) Algae Removal/Scoring</option>
+                <option value="Does not do anything">D) Does not do anything</option>
               </select>
             </div>
           </div>
@@ -302,20 +345,83 @@ const ScoutingForm = () => {
               <label className="block text-gray-700 font-bold mb-2">
                 Algae Handling:
               </label>
-              <select
-                name="algaeHandling"
-                value={formData.algaeHandling}
-                onChange={handleSelectChange}
-                className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              >
-                <option value="">Select an option</option>
-                <option value="doesNotHandle">A) Does Not Handle Algae</option>
-                <option value="collectsFromReef">B) Collects from Reef</option>
-                <option value="collectsFromFloor">C) Collects from Floor</option>
-                <option value="scoresInProcessor">D) Scores in Processor</option>
-                <option value="scoresInOwnNet">E) Scores in own Net</option>
-                <option value="bothBandC">F) Both B and C</option>
-              </select>
+              <div className="space-y-2">
+                <div>
+                  <input
+                    type="checkbox"
+                    id="algaeHandlingDoesNotHandle"
+                    name="algaeHandling"
+                    value="doesNotHandle"
+                    checked={formData.algaeHandling.includes('doesNotHandle')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="algaeHandlingDoesNotHandle">A) Does Not Handle Algae</label>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    id="algaeHandlingCollectsFromReef"
+                    name="algaeHandling"
+                    value="collectsFromReef"
+                    checked={formData.algaeHandling.includes('collectsFromReef')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="algaeHandlingCollectsFromReef">B) Collects from Reef</label>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    id="algaeHandlingCollectsFromFloor"
+                    name="algaeHandling"
+                    value="collectsFromFloor"
+                    checked={formData.algaeHandling.includes('collectsFromFloor')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="algaeHandlingCollectsFromFloor">C) Collects from Floor</label>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    id="algaeHandlingScoresInProcessor"
+                    name="algaeHandling"
+                    value="scoresInProcessor"
+                    checked={formData.algaeHandling.includes('scoresInProcessor')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="algaeHandlingScoresInProcessor">D) Scores in Processor</label>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    id="algaeHandlingScoresInOwnNet"
+                    name="algaeHandling"
+                    value="scoresInOwnNet"
+                    checked={formData.algaeHandling.includes('scoresInOwnNet')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="algaeHandlingScoresInOwnNet">E) Scores in own Net</label>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    id="algaeHandlingBothBandC"
+                    name="algaeHandling"
+                    value="bothBandC"
+                    checked={formData.algaeHandling.includes('bothBandC')}
+                    onChange={handleCheckboxChange}
+                    className="mr-2"
+                  />
+                  <label htmlFor="algaeHandlingBothBandC">F) Both B and C</label>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Select all that apply. Items can be dragged to exact locations in the preview field.
+              </p>
             </div>
             
             {/* Defense Played */}

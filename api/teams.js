@@ -5,14 +5,14 @@ require('dotenv').config();
 const TeamSchema = new mongoose.Schema({
   teamNumber: String,
   name: String,
-  startingPosition: String,
+  startingPosition: [String],
   leavesStartingLine: String,
   coralScoredAutoL1: String,
   coralScoredAutoReef: String,
   algaeScoredAutoReef: String,
   primaryAutoActivity: String,
   coralScoringLocation: [String],
-  algaeHandling: String,
+  algaeHandling: [String],
   defensePlayed: String,
   drivingSpeed: String,
   endgameAction: String,
@@ -90,7 +90,15 @@ module.exports = async (req, res) => {
     else if (req.method === 'POST') {
       console.log('Processing POST request...');
       console.log('Request body:', req.body);
-      const team = new Team(req.body);
+      
+      // Ensure startingPosition and algaeHandling are arrays
+      const teamData = {
+        ...req.body,
+        startingPosition: Array.isArray(req.body.startingPosition) ? req.body.startingPosition : [],
+        algaeHandling: Array.isArray(req.body.algaeHandling) ? req.body.algaeHandling : []
+      };
+      
+      const team = new Team(teamData);
       await team.save();
       console.log('Team saved successfully:', team.teamNumber);
       res.status(201).json(team);
