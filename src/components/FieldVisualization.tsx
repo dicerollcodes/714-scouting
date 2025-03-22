@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { getAllTeams, getPositionName, TeamData } from '../services/teamDataService'
+import { getAllTeams, TeamData } from '../services/teamDataService'
 
 // Define alliance type
 type Alliance = 'blue' | 'red' | null;
@@ -8,7 +8,9 @@ type Alliance = 'blue' | 'red' | null;
 interface TeamPosition {
   teamNumber: string;
   alliance: Alliance;
-  position: 'L' | 'M' | 'R';
+  position: string; // Changed from 'L' | 'M' | 'R' to string to support any position
+  selectedPosition?: string; // Which starting position is selected for this match
+  customPosition?: { x: number, y: number }; // Custom position for draggable positioning
 }
 
 const FieldVisualization = () => {
@@ -50,6 +52,28 @@ const FieldVisualization = () => {
   // For mobile touch support
   const [touchTeam, setTouchTeam] = useState<string | null>(null);
   const [touchPosition, setTouchPosition] = useState<{ x: number, y: number } | null>(null);
+  
+  // Add new state for field dragging
+  const [isDraggingOnField, setIsDraggingOnField] = useState(false);
+  const [fieldDimensions, setFieldDimensions] = useState({ width: 0, height: 0 });
+  const fieldRef = useRef<HTMLDivElement>(null);
+  
+  // Initialize field dimensions on mount
+  useEffect(() => {
+    const updateFieldDimensions = () => {
+      if (fieldRef.current) {
+        const { width, height } = fieldRef.current.getBoundingClientRect();
+        setFieldDimensions({ width, height });
+      }
+    };
+    
+    updateFieldDimensions();
+    window.addEventListener('resize', updateFieldDimensions);
+    
+    return () => {
+      window.removeEventListener('resize', updateFieldDimensions);
+    };
+  }, []);
   
   // Handle drag start
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, teamNumber: string) => {
@@ -203,11 +227,24 @@ const FieldVisualization = () => {
     blueAllianceTeams.forEach((teamNumber) => {
       const team = getTeamData(teamNumber);
       if (team) {
-        newPositions.push({
-          teamNumber,
-          alliance: 'blue',
-          position: team.startingPosition as 'L' | 'M' | 'R'
-        });
+        // Check if team has starting positions
+        if (team.startingPosition && team.startingPosition.length > 0) {
+          // Use the first position as default selected position
+          const defaultPosition = team.startingPosition[0];
+          newPositions.push({
+            teamNumber,
+            alliance: 'blue',
+            position: defaultPosition,
+            selectedPosition: defaultPosition
+          });
+        } else {
+          // Fallback for legacy data
+          newPositions.push({
+            teamNumber,
+            alliance: 'blue',
+            position: 'M', // Default to middle if no position specified
+          });
+        }
       }
     });
     
@@ -215,11 +252,24 @@ const FieldVisualization = () => {
     redAllianceTeams.forEach((teamNumber) => {
       const team = getTeamData(teamNumber);
       if (team) {
-        newPositions.push({
-          teamNumber,
-          alliance: 'red',
-          position: team.startingPosition as 'L' | 'M' | 'R'
-        });
+        // Check if team has starting positions
+        if (team.startingPosition && team.startingPosition.length > 0) {
+          // Use the first position as default selected position
+          const defaultPosition = team.startingPosition[0];
+          newPositions.push({
+            teamNumber,
+            alliance: 'red',
+            position: defaultPosition,
+            selectedPosition: defaultPosition
+          });
+        } else {
+          // Fallback for legacy data
+          newPositions.push({
+            teamNumber,
+            alliance: 'red',
+            position: 'M', // Default to middle if no position specified
+          });
+        }
       }
     });
     
@@ -245,6 +295,11 @@ const FieldVisualization = () => {
   
   // Calculate position for team on field (behind the barge zone)
   const calculateTeamFieldPosition = (position: TeamPosition) => {
+    // If a custom position exists, use it instead of the predefined positions
+    if (position.customPosition) {
+      return `top-[${position.customPosition.y}%] left-[${position.customPosition.x}%]`;
+    }
+    
     const { alliance, position: pos } = position;
     
     if (alliance === 'blue') {
@@ -252,12 +307,14 @@ const FieldVisualization = () => {
         case 'L': return 'top-[25%] left-[40%]'; // BLUE L - left side of field
         case 'M': return 'top-[50%] left-[40%]'; // BLUE M - middle area
         case 'R': return 'top-[75%] left-[40%]'; // BLUE R - right/bottom area
+        default: return 'top-[50%] left-[40%]';  // Default to middle
       }
     } else if (alliance === 'red') {
       switch (pos) {
         case 'M': return 'bottom-[38%] right-[33%]'; // RED M - middle area
         case 'L': return 'bottom-[14%] right-[33%]'; // RED L - left side
         case 'R': return 'bottom-[64%] right-[33%]'; // RED R - right/bottom area
+        default: return 'bottom-[38%] right-[33%]';  // Default to middle
       }
     }
     
@@ -287,12 +344,82 @@ const FieldVisualization = () => {
     );
   };
   
+  // Handle drag on the field itself
+  const handleFieldDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOnField(true);
+  };
+  
+  // Handle leaving the field
+  const handleFieldDragLeave = () => {
+    setIsDraggingOnField(false);
+  };
+  
+  // Handle dropping a team on the field itself (for custom positioning)
+  const handleFieldDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOnField(false);
+    
+    const teamNumber = e.dataTransfer.getData('text/plain');
+    if (!teamNumber) return;
+    
+    // Determine team alliance
+    const alliance = getTeamAlliance(teamNumber);
+    if (!alliance) return; // Team must be in an alliance to be positioned on field
+    
+    // Calculate position as percentage of field dimensions
+    const fieldRect = fieldRef.current?.getBoundingClientRect();
+    if (!fieldRect) return;
+    
+    const x = ((e.clientX - fieldRect.left) / fieldRect.width) * 100;
+    const y = ((e.clientY - fieldRect.top) / fieldRect.height) * 100;
+    
+    // Update team position
+    setTeamPositions(prevPositions => {
+      const teamIndex = prevPositions.findIndex(pos => pos.teamNumber === teamNumber);
+      if (teamIndex === -1) return prevPositions;
+      
+      const newPositions = [...prevPositions];
+      newPositions[teamIndex] = {
+        ...newPositions[teamIndex],
+        customPosition: { x, y }
+      };
+      
+      return newPositions;
+    });
+  };
+  
+  // Handle starting position change
+  const handleStartingPositionChange = (teamNumber: string, position: string) => {
+    setTeamPositions(prevPositions => {
+      const teamIndex = prevPositions.findIndex(pos => pos.teamNumber === teamNumber);
+      if (teamIndex === -1) return prevPositions;
+      
+      const newPositions = [...prevPositions];
+      newPositions[teamIndex] = {
+        ...newPositions[teamIndex],
+        position,
+        selectedPosition: position,
+        // Remove custom position when changing to a predefined position
+        customPosition: undefined
+      };
+      
+      return newPositions;
+    });
+  };
+  
   return (
     <div className="space-y-4">
       {/* Main container with field and alliance boxes */}
       <div className="relative max-w-4xl mx-auto">
         {/* Field container */}
-        <div className="field-container aspect-[2/1] w-full rounded-lg overflow-hidden shadow-xl relative">
+        <div 
+          ref={fieldRef}
+          className={`field-container aspect-[2/1] w-full rounded-lg overflow-hidden shadow-xl relative ${isDraggingOnField ? 'border-4 border-yellow-400' : ''}`}
+          onDragOver={handleFieldDragOver}
+          onDragLeave={handleFieldDragLeave}
+          onDrop={handleFieldDrop}
+        >
           {/* Field background */}
           <div className="absolute inset-0 bg-gray-900"></div>
           
@@ -388,20 +515,54 @@ const FieldVisualization = () => {
             const positionClass = calculateTeamFieldPosition(position);
             const allianceColor = position.alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600';
             
+            // Custom inline style for absolute positioning when using percentages
+            const customPositionStyle = position.customPosition ? {
+              position: 'absolute' as const,
+              top: `${position.customPosition.y}%`,
+              left: `${position.customPosition.x}%`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10
+            } : {};
+            
             return (
               <div 
                 key={`field-${position.teamNumber}`}
-                className={`absolute ${positionClass} transform -translate-y-1/2 -translate-x-1/2 z-10`}
+                className={position.customPosition ? 'cursor-grab active:cursor-grabbing' : `absolute ${positionClass} transform -translate-y-1/2 -translate-x-1/2 z-10`}
+                style={position.customPosition ? customPositionStyle : {}}
                 onClick={() => handleTeamClick(position.teamNumber)}
+                draggable
+                onDragStart={(e) => handleDragStart(e, position.teamNumber)}
               >
-                <div className={`${allianceColor} text-white px-3 py-2 rounded-md shadow-md cursor-pointer hover:opacity-90 transition`}>
+                <div className={`${allianceColor} text-white px-3 py-2 rounded-md shadow-md cursor-pointer hover:opacity-90 transition flex flex-col items-center`}>
                   <div className="font-bold">{team.teamNumber}</div>
+                  {/* Show current position */}
+                  <div className="text-xs">{position.selectedPosition || position.position}</div>
                 </div>
                 
                 {/* Capabilities popup when team is selected */}
                 {selectedTeam === position.teamNumber && (
                   <div className="absolute top-full left-0 mt-2 bg-white rounded-md shadow-lg p-3 z-20 w-48">
                     <h4 className="font-bold text-sm mb-2">Team {team.teamNumber} Capabilities:</h4>
+                    
+                    {/* Starting position dropdown for teams with multiple options */}
+                    {team.startingPosition && team.startingPosition.length > 0 ? (
+                      <div className="mb-3">
+                        <label className="text-xs font-semibold block mb-1">Starting Position:</label>
+                        <select 
+                          className="w-full text-xs p-1 border rounded"
+                          value={position.selectedPosition || position.position}
+                          onChange={(e) => handleStartingPositionChange(team.teamNumber, e.target.value)}
+                        >
+                          {team.startingPosition.map((pos) => (
+                            <option key={pos} value={pos}>{pos}</option>
+                          ))}
+                        </select>
+                        <p className="text-xs mt-1 text-gray-500 italic">
+                          Drag to position anywhere on field
+                        </p>
+                      </div>
+                    ) : null}
+                    
                     <ul className="text-xs space-y-1">
                       <li className="flex items-center">
                         <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities?.autoScoring ? 'bg-green-500' : 'bg-red-500'}`}>
@@ -536,13 +697,19 @@ const FieldVisualization = () => {
                 onTouchEnd={handleTouchEnd}
                 onClick={() => handleTeamClick(team.teamNumber)}
               >
-                <div className="font-medium">{team.teamNumber} <span className="text-xs font-bold ml-1">({getPositionName(team.startingPosition)})</span></div>
+                <div className="font-medium">{team.teamNumber} <span className="text-xs font-bold ml-1">({team.startingPosition ? team.startingPosition.join(', ') : 'Not specified'})</span></div>
                 
                 {/* Capabilities popup when team is selected in selector */}
                 {selectedTeam === team.teamNumber && (
                   <div className="absolute mt-2 bg-white rounded-md shadow-lg p-3 z-20 w-48">
                     <h4 className="font-bold text-sm mb-2">Team {team.teamNumber} Capabilities:</h4>
-                    <p className="text-xs mb-1">Start Position: <span className="font-bold">{getPositionName(team.startingPosition)}</span></p>
+                    <p className="text-xs mb-1">
+                      Position(s): <span className="font-bold">
+                        {team.startingPosition && team.startingPosition.length 
+                          ? team.startingPosition.join(', ')
+                          : 'Not specified'}
+                      </span>
+                    </p>
                     <ul className="text-xs space-y-1">
                       <li className="flex items-center">
                         <span className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${team.capabilities?.autoScoring ? 'bg-green-500' : 'bg-red-500'}`}>

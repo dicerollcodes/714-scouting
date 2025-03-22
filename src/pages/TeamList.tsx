@@ -42,7 +42,9 @@ const TeamList = () => {
     const capabilities = team.capabilities || {
       autoScoring: team.coralScoredAutoL1 !== '0' || team.coralScoredAutoReef !== '0',
       highScoring: team.coralScoringLocation.includes('L3Branches') || team.coralScoringLocation.includes('L4Branches'),
-      algaeHandling: team.algaeHandling !== 'doesNotHandle',
+      algaeHandling: Array.isArray(team.algaeHandling) 
+        ? team.algaeHandling.length > 0 && (!team.algaeHandling.includes('doesNotHandle') || team.algaeHandling.length > 1)
+        : team.algaeHandling !== 'doesNotHandle',
       climbing: team.endgameAction === 'climbsCageShallow' || team.endgameAction === 'climbsCageDeep',
       fastDriving: team.drivingSpeed === 'veryFast' || team.drivingSpeed === 'fast'
     }
@@ -162,9 +164,11 @@ const TeamList = () => {
                   <h2 className="text-2xl font-bold text-gray-800">Team {team.teamNumber}</h2>
                   <div className={`
                     px-2 py-1 rounded-md text-xs font-bold uppercase
-                    ${team.startingPosition === 'L' ? 'bg-blue-100 text-blue-800' : 
-                      team.startingPosition === 'M' ? 'bg-green-100 text-green-800' : 
-                      'bg-red-100 text-red-800'}
+                    ${Array.isArray(team.startingPosition) && team.startingPosition.length > 0 
+                      ? (team.startingPosition.includes('L') ? 'bg-blue-100 text-blue-800' : 
+                         team.startingPosition.includes('M') ? 'bg-green-100 text-green-800' : 
+                         'bg-red-100 text-red-800')
+                      : 'bg-gray-100 text-gray-800'}
                   `}>
                     {getPositionName(team.startingPosition)}
                   </div>
@@ -180,7 +184,11 @@ const TeamList = () => {
                     <span className="text-sm text-gray-600">High Scoring (L3/L4)</span>
                   </div>
                   <div className="flex items-center">
-                    <div className={`w-4 h-4 rounded-full ${team.algaeHandling !== 'doesNotHandle' ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
+                    <div className={`w-4 h-4 rounded-full ${
+                      Array.isArray(team.algaeHandling) 
+                        ? (team.algaeHandling.length > 0 && !team.algaeHandling.includes('doesNotHandle')) 
+                        : (team.algaeHandling !== 'doesNotHandle')
+                    } ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
                     <span className="text-sm text-gray-600">Handles Algae</span>
                   </div>
                   <div className="flex items-center">

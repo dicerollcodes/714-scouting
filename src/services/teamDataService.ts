@@ -24,8 +24,14 @@ export interface TeamData {
   };
 }
 
-// Helper function to get full position name
-export const getPositionName = (position: string): string => {
+// Helper function to get full position name - support both string and array inputs
+export const getPositionName = (position: string | string[]): string => {
+  if (Array.isArray(position)) {
+    // If it's an array, join the positions with commas
+    return position.map(pos => getPositionName(pos)).join(', ');
+  }
+  
+  // For single string values
   switch (position) {
     case 'L': return 'Left';
     case 'M': return 'Middle';
