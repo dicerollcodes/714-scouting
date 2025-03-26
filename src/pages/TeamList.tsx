@@ -5,23 +5,28 @@ import { getAllTeams, getPositionName, TeamData } from '../services/teamDataServ
 const TeamList = () => {
   const [teams, setTeams] = useState<TeamData[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState({
     autoScoring: false,
     highScoring: false,
     algaeHandling: false,
     climbing: false,
+    fastDriving: false,
   })
   
   // Fetch team data from MongoDB
   useEffect(() => {
     const fetchTeams = async () => {
       try {
+        setLoading(true)
+        setError(null)
         const teamsData = await getAllTeams()
         setTeams(teamsData)
         setLoading(false)
       } catch (error) {
         console.error('Error fetching teams:', error)
+        setError('Failed to load teams. Please try again later.')
         setLoading(false)
       }
     }
@@ -29,22 +34,28 @@ const TeamList = () => {
     fetchTeams()
   }, [])
   
+  // Safe check for arrays
+  const isArrayWithValues = (arr: any): boolean => {
+    return Array.isArray(arr) && arr.length > 0
+  }
+  
   // Filter teams based on search and capability filters
   const filteredTeams = teams.filter(team => {
-    const matchesSearch = team.teamNumber.includes(searchTerm)
+    const matchesSearch = team.teamNumber.toLowerCase().includes(searchTerm.toLowerCase())
     
     // Skip capability filtering if no filters are active
-    if (!filter.autoScoring && !filter.highScoring && !filter.algaeHandling && !filter.climbing) {
+    if (!filter.autoScoring && !filter.highScoring && !filter.algaeHandling && !filter.climbing && !filter.fastDriving) {
       return matchesSearch
     }
     
     // Check capabilities
     const capabilities = team.capabilities || {
       autoScoring: team.coralScoredAutoL1 !== '0' || team.coralScoredAutoReef !== '0',
-      highScoring: team.coralScoringLocation.includes('L3Branches') || team.coralScoringLocation.includes('L4Branches'),
-      algaeHandling: Array.isArray(team.algaeHandling) 
-        ? team.algaeHandling.length > 0 && (!team.algaeHandling.includes('doesNotHandle') || team.algaeHandling.length > 1)
-        : team.algaeHandling !== 'doesNotHandle',
+      highScoring: isArrayWithValues(team.coralScoringLocation) && 
+                  (team.coralScoringLocation.includes('L3Branches') || team.coralScoringLocation.includes('L4Branches')),
+      algaeHandling: isArrayWithValues(team.algaeHandling) 
+        ? !team.algaeHandling.includes('doesNotHandle') || team.algaeHandling.length > 1
+        : false,
       climbing: team.endgameAction === 'climbsCageShallow' || team.endgameAction === 'climbsCageDeep',
       fastDriving: team.drivingSpeed === 'veryFast' || team.drivingSpeed === 'fast'
     }
@@ -54,7 +65,8 @@ const TeamList = () => {
       (!filter.autoScoring || capabilities.autoScoring) &&
       (!filter.highScoring || capabilities.highScoring) &&
       (!filter.algaeHandling || capabilities.algaeHandling) &&
-      (!filter.climbing || capabilities.climbing)
+      (!filter.climbing || capabilities.climbing) &&
+      (!filter.fastDriving || capabilities.fastDriving)
     
     return matchesSearch && hasRequiredCapabilities
   })
@@ -77,6 +89,15 @@ const TeamList = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+  
+  if (error) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-4" role="alert">
+        <strong className="font-bold">Error!</strong>
+        <span className="block sm:inline"> {error}</span>
       </div>
     )
   }
@@ -146,6 +167,16 @@ const TeamList = () => {
               />
               <span className="ml-2">Can Climb</span>
             </label>
+            <label className="inline-flex items-center">
+              <input 
+                type="checkbox" 
+                name="fastDriving" 
+                checked={filter.fastDriving} 
+                onChange={handleFilterChange}
+                className="form-checkbox h-5 w-5 text-blue-600"
+              />
+              <span className="ml-2">Fast Driving</span>
+            </label>
           </div>
         </div>
       </div>
@@ -164,7 +195,7 @@ const TeamList = () => {
                   <h2 className="text-2xl font-bold text-gray-800">Team {team.teamNumber}</h2>
                   <div className={`
                     px-2 py-1 rounded-md text-xs font-bold uppercase
-                    ${Array.isArray(team.startingPosition) && team.startingPosition.length > 0 
+                    ${isArrayWithValues(team.startingPosition)
                       ? (team.startingPosition.includes('L') ? 'bg-blue-100 text-blue-800' : 
                          team.startingPosition.includes('M') ? 'bg-green-100 text-green-800' : 
                          'bg-red-100 text-red-800')
@@ -180,15 +211,19 @@ const TeamList = () => {
                     <span className="text-sm text-gray-600">Auto Scoring</span>
                   </div>
                   <div className="flex items-center">
-                    <div className={`w-4 h-4 rounded-full ${team.coralScoringLocation.includes('L3Branches') || team.coralScoringLocation.includes('L4Branches') ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
+                    <div className={`w-4 h-4 rounded-full ${
+                      isArrayWithValues(team.coralScoringLocation) && 
+                      (team.coralScoringLocation.includes('L3Branches') || team.coralScoringLocation.includes('L4Branches')) 
+                      ? 'bg-green-500' : 'bg-red-500'
+                    } mr-2`}></div>
                     <span className="text-sm text-gray-600">High Scoring (L3/L4)</span>
                   </div>
                   <div className="flex items-center">
                     <div className={`w-4 h-4 rounded-full ${
-                      Array.isArray(team.algaeHandling) 
-                        ? (team.algaeHandling.length > 0 && !team.algaeHandling.includes('doesNotHandle')) 
-                        : (team.algaeHandling !== 'doesNotHandle')
-                    } ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
+                      isArrayWithValues(team.algaeHandling) 
+                        ? (!team.algaeHandling.includes('doesNotHandle') || team.algaeHandling.length > 1)
+                        : false
+                      ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
                     <span className="text-sm text-gray-600">Handles Algae</span>
                   </div>
                   <div className="flex items-center">
@@ -203,7 +238,7 @@ const TeamList = () => {
                 
                 <Link 
                   to={`/teams/${team.teamNumber}`} 
-                  className="block w-full bg-team-blue text-white text-center py-2 rounded-md hover:bg-blue-700 transition"
+                  className="block w-full bg-blue-600 text-white text-center py-2 rounded-md hover:bg-blue-700 transition"
                 >
                   View Details
                 </Link>

@@ -8,29 +8,33 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// More permissive CORS configuration
-app.use(cors());
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+// Apply CORS to all routes
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(bodyParser.json());
 
 // Add options preflight for all routes
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 
 // Add a simple test endpoint that responds to all origins
 app.get('/api/test', (req, res) => {
   console.log('Test endpoint hit');
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
   res.json({ message: 'API server is working correctly!' });
 });
 
 // Add a status endpoint that includes MongoDB connection status
 app.get('/api/status', (req, res) => {
   console.log('Status endpoint hit');
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
   
   const mongoStatus = mongoose.connection.readyState;
   const statusMessage = {
@@ -44,18 +48,31 @@ app.get('/api/status', (req, res) => {
   res.json(statusMessage);
 });
 
-// Connect to MongoDB
+// Connect to MongoDB with improved error handling
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/frc-scouting', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB connected'))
+.then(() => console.log('MongoDB connected successfully'))
 .catch(err => {
   console.log('MongoDB connection error:', err);
   console.log('Connection string used (redacted password):', 
     process.env.MONGODB_URI ? 
     process.env.MONGODB_URI.replace(/:([^:@]+)@/, ':****@') : 
     'mongodb://localhost:27017/frc-scouting');
+});
+
+// Handle MongoDB connection events
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('MongoDB reconnected');
 });
 
 // Define Alliance Schema
@@ -101,14 +118,9 @@ const TeamSchema = new mongoose.Schema({
 
 const Team = mongoose.model('Team', TeamSchema);
 
-// Routes with explicit CORS headers
+// Routes - no need for explicit CORS headers as they're applied globally
 app.get('/api/alliances/:eventKey', async (req, res) => {
-  try {
-    // Add CORS headers explicitly
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    
+  try {    
     console.log(`GET request received for event key: ${req.params.eventKey}`);
     const { eventKey } = req.params;
     const alliances = await Alliance.findOne({ eventKey });
@@ -121,12 +133,7 @@ app.get('/api/alliances/:eventKey', async (req, res) => {
 });
 
 app.post('/api/alliances', async (req, res) => {
-  try {
-    // Add CORS headers explicitly
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'POST');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    
+  try {    
     console.log('POST request received for alliances');
     
     // Check if request body exists
@@ -177,14 +184,9 @@ app.post('/api/alliances', async (req, res) => {
   }
 });
 
-// Team Routes with explicit CORS headers
+// Team Routes
 app.get('/api/teams', async (req, res) => {
-  try {
-    // Add CORS headers explicitly
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    
+  try {    
     console.log('GET request received for all teams');
     const teams = await Team.find();
     console.log(`Found ${teams.length} teams`);
@@ -196,12 +198,7 @@ app.get('/api/teams', async (req, res) => {
 });
 
 app.get('/api/teams/:teamNumber', async (req, res) => {
-  try {
-    // Add CORS headers explicitly
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    
+  try {    
     console.log(`GET request received for team number: ${req.params.teamNumber}`);
     const { teamNumber } = req.params;
     const team = await Team.findOne({ teamNumber });
@@ -216,13 +213,9 @@ app.get('/api/teams/:teamNumber', async (req, res) => {
   }
 });
 
+// More robust handling for team data with array type validation
 app.post('/api/teams', async (req, res) => {
-  try {
-    // Add CORS headers explicitly
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'POST');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    
+  try {    
     console.log('POST request received for team');
     
     // Check if request body exists
@@ -233,11 +226,15 @@ app.post('/api/teams', async (req, res) => {
     
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
-    // Ensure startingPosition and algaeHandling are arrays
+    // Ensure required fields are arrays
     const teamData = {
       ...req.body,
-      startingPosition: Array.isArray(req.body.startingPosition) ? req.body.startingPosition : [],
-      algaeHandling: Array.isArray(req.body.algaeHandling) ? req.body.algaeHandling : []
+      startingPosition: Array.isArray(req.body.startingPosition) ? req.body.startingPosition : 
+                        req.body.startingPosition ? [req.body.startingPosition] : [],
+      coralScoringLocation: Array.isArray(req.body.coralScoringLocation) ? req.body.coralScoringLocation : 
+                           req.body.coralScoringLocation ? [req.body.coralScoringLocation] : [],
+      algaeHandling: Array.isArray(req.body.algaeHandling) ? req.body.algaeHandling : 
+                    req.body.algaeHandling ? [req.body.algaeHandling] : []
     };
     
     // Check if team already exists
@@ -248,7 +245,7 @@ app.post('/api/teams', async (req, res) => {
       // Update existing team
       Object.assign(existingTeam, teamData);
       await existingTeam.save();
-      console.log('Existing team updated successfully');
+      console.log('Team updated successfully');
       res.json(existingTeam);
     } else {
       // Create new team
@@ -263,23 +260,17 @@ app.post('/api/teams', async (req, res) => {
   }
 });
 
-// Serve static assets in production
+// Serve static assets if in production
 if (process.env.NODE_ENV === 'production') {
   // Set static folder
   app.use(express.static('dist'));
-  
-  // Handle all routes not handled by API with the index.html
+
+  // Serve the React app
   app.get('*', (req, res) => {
-    // Skip API routes
-    if (req.url.startsWith('/api/')) return;
-    
     res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
   });
 }
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  // Log MongoDB connection status
-  console.log(`MongoDB connection status: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
 }); 

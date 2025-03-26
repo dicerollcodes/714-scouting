@@ -27,6 +27,7 @@ export interface TeamData {
 // Helper function to get full position name - support both string and array inputs
 export const getPositionName = (position: string | string[]): string => {
   if (Array.isArray(position)) {
+    if (position.length === 0) return 'Unknown';
     // If it's an array, join the positions with commas
     return position.map(pos => getPositionName(pos)).join(', ');
   }
@@ -41,7 +42,7 @@ export const getPositionName = (position: string | string[]): string => {
     case 'leftCoralStation': return 'Left';
     case 'middle': return 'Middle';
     case 'rightCoralStation': return 'Right';
-    default: return position;
+    default: return position || 'Unknown';
   }
 };
 
@@ -54,12 +55,24 @@ const API_BASE_URL = isProd
 
 const API_URL = `${API_BASE_URL}/api/teams`;
 
-// Get all teams
+// Utility function for retrying failed API calls
+const retryAxios = async (fn: () => Promise<any>, retries = 3, delay = 1000): Promise<any> => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries <= 0) throw error;
+    console.log(`Retrying API call, ${retries} attempts left`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return retryAxios(fn, retries - 1, delay);
+  }
+};
+
+// Get all teams with retry logic
 export const getAllTeams = async (): Promise<TeamData[]> => {
   try {
     // First check if API is available with better error handling
     try {
-      const statusResponse = await axios.get(`${API_BASE_URL}/api/status`);
+      const statusResponse = await retryAxios(() => axios.get(`${API_BASE_URL}/api/status`));
       console.log('API Status:', statusResponse.data);
       
       // If MongoDB is not connected, log an error
@@ -71,12 +84,23 @@ export const getAllTeams = async (): Promise<TeamData[]> => {
       // We'll still try to get the teams
     }
 
-    const response = await axios.get(API_URL);
+    const response = await retryAxios(() => axios.get(API_URL));
     
     // Add better logging for debugging
     console.log(`Successfully fetched ${response.data.length} teams`);
     
-    return response.data;
+    // Ensure all teams have proper array fields
+    const teams = response.data.map((team: any) => ({
+      ...team,
+      startingPosition: Array.isArray(team.startingPosition) ? team.startingPosition : 
+                         team.startingPosition ? [team.startingPosition] : [],
+      coralScoringLocation: Array.isArray(team.coralScoringLocation) ? team.coralScoringLocation : 
+                          team.coralScoringLocation ? [team.coralScoringLocation] : [],
+      algaeHandling: Array.isArray(team.algaeHandling) ? team.algaeHandling : 
+                    team.algaeHandling ? [team.algaeHandling] : []
+    }));
+    
+    return teams;
   } catch (error) {
     console.error('Error fetching teams:', error);
     // Return empty array to avoid app crashing
@@ -84,22 +108,47 @@ export const getAllTeams = async (): Promise<TeamData[]> => {
   }
 };
 
-// Get team by team number
+// Get team by team number with retry logic
 export const getTeamByNumber = async (teamNumber: string): Promise<TeamData | null> => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/teams/${teamNumber}`);
-    return response.data;
+    const response = await retryAxios(() => axios.get(`${API_BASE_URL}/api/teams/${teamNumber}`));
+    
+    // Ensure proper array fields
+    if (response.data) {
+      return {
+        ...response.data,
+        startingPosition: Array.isArray(response.data.startingPosition) ? response.data.startingPosition : 
+                           response.data.startingPosition ? [response.data.startingPosition] : [],
+        coralScoringLocation: Array.isArray(response.data.coralScoringLocation) ? response.data.coralScoringLocation : 
+                            response.data.coralScoringLocation ? [response.data.coralScoringLocation] : [],
+        algaeHandling: Array.isArray(response.data.algaeHandling) ? response.data.algaeHandling : 
+                      response.data.algaeHandling ? [response.data.algaeHandling] : []
+      };
+    }
+    return null;
   } catch (error) {
     console.error(`Error fetching team ${teamNumber}:`, error);
     return null;
   }
 };
 
-// Add team data to MongoDB
+// Add team data to MongoDB with retry logic
 export const addTeamData = async (teamData: TeamData): Promise<TeamData | null> => {
   try {
     console.log('Saving team data to API:', teamData);
-    const response = await axios.post(API_URL, teamData);
+    
+    // Ensure data has proper array fields before sending
+    const preparedData = {
+      ...teamData,
+      startingPosition: Array.isArray(teamData.startingPosition) ? teamData.startingPosition : 
+                        teamData.startingPosition ? [teamData.startingPosition] : [],
+      coralScoringLocation: Array.isArray(teamData.coralScoringLocation) ? teamData.coralScoringLocation : 
+                          teamData.coralScoringLocation ? [teamData.coralScoringLocation] : [],
+      algaeHandling: Array.isArray(teamData.algaeHandling) ? teamData.algaeHandling : 
+                    teamData.algaeHandling ? [teamData.algaeHandling] : []
+    };
+    
+    const response = await retryAxios(() => axios.post(API_URL, preparedData));
     console.log('API Response:', response.data);
     return response.data;
   } catch (error) {
